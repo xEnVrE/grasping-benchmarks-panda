@@ -51,9 +51,10 @@ from shape_completion import complete_point_cloud
 
 
 class GraspingBenchmarksManager(object):
-    def __init__(self, grasp_planner_service_name, grasp_planner_service, user_cmd_service_name, panda_service_name, verbose=False):
+    def __init__(self, grasp_planner_service_name, grasp_planner_service, user_cmd_service_name, panda_service_name, use_aruco, verbose=False):
 
         self._verbose = verbose
+        self._use_aruco = use_aruco
 
         # --- new grasp command service --- #
         self._new_grasp_srv = rospy.Service(user_cmd_service_name, UserCmd, self.user_cmd)
@@ -102,9 +103,10 @@ class GraspingBenchmarksManager(object):
         self._pc_msg = None
         self._background_pc_msg = None
         self._camera_pose = TransformStamped()
-        self._aruco_board_pose = TransformStamped()
         self._root_reference_frame = 'panda_link0'
-        self._aruco_reference_frame = 'aruco_board'
+        if self._use_aruco:
+            self._aruco_board_pose = TransformStamped()
+            self._aruco_reference_frame = 'aruco_board'
         self._enable_grasp_filter = False
 
         self._seg_msg = NEW_MSG
@@ -242,10 +244,10 @@ class GraspingBenchmarksManager(object):
                 print("... send request to server ...")
 
             # Fill in the arcuo board wrt world reference frame
-
-            planner_req.aruco_board.position = self._aruco_board_pose.transform.translation
-            planner_req.aruco_board.orientation = self._aruco_board_pose.transform.rotation
-            planner_req.grasp_filter_flag = self._enable_grasp_filter
+            if self._use_aruco:
+                planner_req.aruco_board.position = self._aruco_board_pose.transform.translation
+                planner_req.aruco_board.orientation = self._aruco_board_pose.transform.rotation
+                planner_req.grasp_filter_flag = self._enable_grasp_filter
 
             # Plan for grasps
             try:
@@ -455,13 +457,14 @@ class GraspingBenchmarksManager(object):
         # Get the aruco board transform wrt the root reference frame of this class.
         # If the aruco board is not found an exception is thrown and   _enable_grasp_filter
         # is set false in order to avoid filtering in plan_grasp function in graspnet_grasp_planner.py
-        try:
-            self._aruco_board_pose = self._tfBuffer.lookup_transform(self._root_reference_frame, self._aruco_reference_frame, rospy.Time(),rospy.Duration(1.0))
-            self._enable_grasp_filter = True
+        if self._use_aruco:
+            try:
+                self._aruco_board_pose = self._tfBuffer.lookup_transform(self._root_reference_frame, self._aruco_reference_frame, rospy.Time(),rospy.Duration(1.0))
+                self._enable_grasp_filter = True
 
-        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-            rospy.logwarn("tf listener could not get aruco board pose. Are you publishing aruco board poses on tf?")
-            self._enable_grasp_filter = False
+            except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+                rospy.logwarn("tf listener could not get aruco board pose. Are you publishing aruco board poses on tf?")
+                self._enable_grasp_filter = False
 
 
     def seg_img_callback(self, data):
@@ -514,9 +517,10 @@ if __name__ == "__main__":
     grasp_planner_service = rospy.get_param("~grasp_planner_service")
     new_grasp_service_name = rospy.get_param("~user_cmd_service_name")
     panda_service_name = "panda_grasp" # rospy.get_param("/panda_service_name")
+    use_aruco = rospy.get_param("~use_aruco")
 
     # Instantiate benchmark client class
-    bench_manager = GraspingBenchmarksManager(grasp_planner_service_name, grasp_planner_service, new_grasp_service_name, panda_service_name, verbose=True)
+    bench_manager = GraspingBenchmarksManager(grasp_planner_service_name, grasp_planner_service, new_grasp_service_name, panda_service_name, use_aruco, verbose=True)
 
     # Spin forever.
     rospy.spin()
