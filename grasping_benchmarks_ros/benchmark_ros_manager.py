@@ -306,10 +306,10 @@ class GraspingBenchmarksManager(object):
     def order_grasp_candidates(self, grasps):
         """Return the grasp candidates ordered according to their score in descending order"""
 
-        keyed_grasp_list = {grasp.score.data : grasp for grasp in grasps}
-        sorted_grasp_list = collections.OrderedDict(sorted(keyed_grasp_list.items(), reverse = True))
+        def grasp_ordering(grasp):
+            return grasp.score.data
 
-        return sorted_grasp_list.values()
+        return sorted(grasps, key = grasp_ordering, reverse = True)
 
     def dump_grasps(self, grasps:list, dump_dir_base:str = "/workspace/dump_"):
         """Dumps a list of grasp candidates to textfiles. Will generate
