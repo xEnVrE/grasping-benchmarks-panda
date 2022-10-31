@@ -77,6 +77,12 @@ bool GpdGraspPlannerService::planGrasps(grasping_benchmarks_ros::GraspPlanner::R
   // The list is already ordered by grasp quality
   std::vector<std::unique_ptr<gpd::candidate::Hand>> grasps = grasp_detector_->detectGrasps(*cloud_camera_);
 
+  if (grasps.size() <= 0)
+  {
+    ROS_WARN("Not enough grasp candidates detected!");
+    return false;
+  }
+
   // Visualize the detected grasps in rviz.
   if (use_rviz_)
   {
