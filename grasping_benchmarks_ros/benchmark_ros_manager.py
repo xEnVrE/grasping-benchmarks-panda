@@ -15,6 +15,7 @@ Its features are:
 (4. assess if the grasp was successful or not)
 """
 
+import collections
 import rospy
 import warnings
 import message_filters
@@ -265,19 +266,15 @@ class GraspingBenchmarksManager(object):
             # If we are required to grasp, test the feasibility of the candidates first
             # and send the best grasp between the feasible candidates
             if req.cmd.data == "grasp":
-                feasible_candidates = self.get_feasible_grasps(reply.grasp_candidates)
-                rospy.loginfo(f"Feasible candidates: {len(feasible_candidates)}/{len(reply.grasp_candidates)}")
-                if not len(feasible_candidates):
+                ordered_candidates = self.order_grasp_candidates(reply.grasp_candidates)
+                feasible_candidate = self.get_first_feasible_grasp(ordered_candidates)
+
+                if not feasible_candidate:
                     if self._verbose:
                         rospy.logwarn("No feasible candidates...")
                     return Bool(False)
                 else:
-                    best_candidate = self.get_best_grasp(feasible_candidates)
-                    if self._verbose:
-                        rospy.loginfo("The following grasp is about to be executed:")
-                        rospy.loginfo(best_candidate)
-                        rospy.sleep(3)
-                    return self.execute_grasp(best_candidate)
+                    return self.execute_grasp(feasible_candidate)
             else:
                 return self.dump_grasps(reply.grasp_candidates)
 
@@ -305,6 +302,14 @@ class GraspingBenchmarksManager(object):
                 best_candidate = grasp
 
         return best_candidate
+
+    def order_grasp_candidates(self, grasps):
+        """Return the grasp candidates ordered according to their score in descending order"""
+
+        keyed_grasp_list = {grasp.score.data : grasp for grasp in grasps}
+        sorted_grasp_list = collections.OrderedDict(sorted(keyed_grasp_list.items(), reverse = True))
+
+        return sorted_grasp_list.values()
 
     def dump_grasps(self, grasps:list, dump_dir_base:str = "/workspace/dump_"):
         """Dumps a list of grasp candidates to textfiles. Will generate
@@ -391,6 +396,19 @@ class GraspingBenchmarksManager(object):
                 feasible_candidates.append(candidate)
 
         return feasible_candidates
+
+    def get_first_feasible_grasp(self, grasps):
+        """Return the first feasible grasp from the list"""
+
+        feasible_candidate = None
+        for index, candidate in enumerate(grasps):
+            if self._verbose:
+                rospy.loginfo("Testing candidate # {}..." .format(index))
+            if self.test_grasp_feasibility(candidate):
+                feasible_candidate = candidate
+                break
+
+        return feasible_candidate
 
     def test_grasp_feasibility(self, grasp:BenchmarkGrasp) -> bool:
         """Queries the primitive server to understand if a valid trajectory to
