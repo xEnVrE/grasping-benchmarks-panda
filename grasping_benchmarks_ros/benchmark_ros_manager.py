@@ -187,9 +187,9 @@ class GraspingBenchmarksManager(object):
             background_pc_in = self._background_pc_msg
             tr_matrix = np.identity(4)
             tr_matrix[:3, :3] = quaternion_to_matrix([transform.rotation.x,
-                                                    transform.rotation.y,
-                                                    transform.rotation.z,
-                                                    transform.rotation.w])
+                                                      transform.rotation.y,
+                                                      transform.rotation.z,
+                                                      transform.rotation.w])
             tr_matrix[:3, 3] = [transform.translation.x,
                                 transform.translation.y,
                                 transform.translation.z]
