@@ -95,7 +95,7 @@ bool GpdGraspPlannerService::planGrasps(grasping_benchmarks_ros::GraspPlanner::R
   grasping_benchmarks_ros::BenchmarkGrasp best_grasp = GraspMessages::convertToBenchmarkGraspMsg(*grasps[0], cloud_camera_header_, grasp_pose_offset_);
 
   // Make sure to not include more than req.n_of_candidates candidates
-  for (size_t grasp_idx = 0; grasp_idx < req.n_of_candidates; ++grasp_idx)
+  for (size_t grasp_idx = 0; grasp_idx < std::min(int(req.n_of_candidates), int(grasps.size())); ++grasp_idx)
   {
     auto& grasp_candidate = grasps[grasp_idx];
     grasping_benchmarks_ros::BenchmarkGrasp bench_grasp = GraspMessages::convertToBenchmarkGraspMsg(*grasp_candidate, cloud_camera_header_, grasp_pose_offset_);
