@@ -37,7 +37,7 @@ from panda_ros_common.srv import PandaGrasp, PandaGraspRequest, PandaGraspRespon
 import numpy as np
 import re
 
-NUMBER_OF_CANDIDATES = 5
+MAX_NUMBER_OF_CANDIDATES = 10
 
 NEW_MSG = {
 "new_data": False,
@@ -238,10 +238,7 @@ class GraspingBenchmarksManager(object):
             planner_req.cloud = pc_out
 
             # Set number of candidates
-            planner_req.n_of_candidates = NUMBER_OF_CANDIDATES if req.cmd.data == "grasp" else int(req.cmd.data.split()[1])
-
-            if self._verbose:
-                print("... send request to server ...")
+            planner_req.n_of_candidates = MAX_NUMBER_OF_CANDIDATES if req.cmd.data == "grasp" else int(req.cmd.data.split()[1])
 
             # Fill in the arcuo board wrt world reference frame
             if self._use_aruco:
