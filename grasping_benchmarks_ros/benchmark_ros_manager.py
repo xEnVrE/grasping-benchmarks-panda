@@ -251,16 +251,18 @@ class GraspingBenchmarksManager(object):
 
             # Plan for grasps
             try:
+                if self._verbose:
+                    rospy.loginfo("Sending request to the grasping planner...")
                 reply = self._grasp_planner(planner_req)
                 if self._verbose:
-                    print("Service {} reply is: \n{}" .format(self._grasp_planner.resolved_name, reply))
+                    rospy.loginfo("Received {} candidates..." .format(len(reply.grasp_candidates)))
             except rospy.ServiceException as e:
                 print("Service {} call failed: {}" .format(self._grasp_planner.resolved_name, e))
                 return Bool(False)
 
             # Handle abort command
             if self._abort:
-                rospy.loginfo("grasp execution was aborted by the user")
+                rospy.loginfo("Grasp execution was aborted by the user...")
                 return Bool(False)
 
             # If we are required to grasp, test the feasibility of the candidates first
@@ -269,9 +271,16 @@ class GraspingBenchmarksManager(object):
                 feasible_candidates = self.get_feasible_grasps(reply.grasp_candidates)
                 rospy.loginfo(f"Feasible candidates: {len(feasible_candidates)}/{len(reply.grasp_candidates)}")
                 if not len(feasible_candidates):
+                    if self._verbose:
+                        rospy.logwarn("No feasible candidates...")
                     return Bool(False)
                 else:
-                    return self.execute_grasp(self.get_best_grasp(feasible_candidates))
+                    best_candidate = self.get_best_grasp(feasible_candidates)
+                    if self._verbose:
+                        rospy.loginfo("The following grasp is about to be executed:")
+                        rospy.loginfo(best_candidate)
+                        rospy.sleep(3)
+                    return self.execute_grasp(best_candidate)
             else:
                 return self.dump_grasps(reply.grasp_candidates)
 
@@ -378,7 +387,9 @@ class GraspingBenchmarksManager(object):
         """
 
         feasible_candidates = []
-        for candidate in grasps:
+        for index, candidate in enumerate(grasps):
+            if self._verbose:
+                rospy.loginfo("Testing candidate # {}..." .format(index))
             if self.test_grasp_feasibility(candidate):
                 feasible_candidates.append(candidate)
 
